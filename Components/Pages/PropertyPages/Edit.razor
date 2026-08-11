@@ -1,0 +1,124 @@
+@page "/properties/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+@attribute [Authorize(Roles = "Owner")]
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Property</h2>
+<hr />
+@if (Property is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Property" OnValidSubmit="UpdateProperty" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert" />
+                <input type="hidden" name="Property.Id" value="@Property.Id" />
+                <div class="mb-3">
+                    <span class="text-danger">*</span>
+                    <label for="title" class="form-label">Title:</label>
+                    <InputText id="title" @bind-Value="Property.Title" class="form-control" aria-required="true" />
+                    <ValidationMessage For="() => Property.Title" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description:</label>
+                    <InputText id="description" @bind-Value="Property.Description" class="form-control" />
+                    <ValidationMessage For="() => Property.Description" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <span class="text-danger">*</span>
+                    <label for="city" class="form-label">City:</label>
+                    <InputText id="city" @bind-Value="Property.City" class="form-control" aria-required="true" />
+                    <ValidationMessage For="() => Property.City" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="priceperslot" class="form-label">PricePerSlot:</label>
+                    <InputNumber id="priceperslot" @bind-Value="Property.PricePerSlot" class="form-control" />
+                    <ValidationMessage For="() => Property.PricePerSlot" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="imageurl" class="form-label">ImageUrl:</label>
+                    <InputText id="imageurl" @bind-Value="Property.ImageUrl" class="form-control" />
+                    <ValidationMessage For="() => Property.ImageUrl" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="maxoccupancy" class="form-label">MaxOccupancy:</label>
+                    <InputNumber id="maxoccupancy" @bind-Value="Property.MaxOccupancy" class="form-control" />
+                    <ValidationMessage For="() => Property.MaxOccupancy" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/properties">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Property? Property { get; set; }
+
+    string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        using var context = DbFactory.CreateDbContext();
+        Property ??= await context.Properties.FirstOrDefaultAsync(p => p.Id == Id && p.OwnerId == userId);
+
+        if (Property is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    
+    private async Task UpdateProperty()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Property!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PropertyExists(Property!.Id))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/properties/mine");
+    }
+
+    private bool PropertyExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Properties.Any(p => p.Id == id && p.OwnerId == userId);
+    }
+}

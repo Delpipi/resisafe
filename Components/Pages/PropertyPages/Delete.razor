@@ -1,0 +1,83 @@
+@page "/properties/delete"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+@attribute [Authorize(Roles = "Owner")]
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Property</h2>
+    <hr />
+    @if (property is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@property.Title</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Description</dt>
+            <dd class="col-sm-10">@property.Description</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">City</dt>
+            <dd class="col-sm-10">@property.City</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">PricePerSlot</dt>
+            <dd class="col-sm-10">@property.PricePerSlot</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">ImageUrl</dt>
+            <dd class="col-sm-10">@property.ImageUrl</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">MaxOccupancy</dt>
+            <dd class="col-sm-10">@property.MaxOccupancy</dd>
+        </dl>
+
+        <EditForm method="post" Model="property" OnValidSubmit="DeleteProperty" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(property is null)">Delete</button> |
+            <a href="/properties">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Property? property;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        using var context = DbFactory.CreateDbContext();
+        property = await context.Properties.FirstOrDefaultAsync(p => p.Id == Id && p.OwnerId == userId);
+
+        if (property is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    private async Task DeleteProperty()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Properties.Remove(property!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/properties/mine");
+    }
+}

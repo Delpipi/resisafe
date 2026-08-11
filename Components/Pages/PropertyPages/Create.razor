@@ -1,0 +1,79 @@
+@page "/properties/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+@attribute [Authorize(Roles = "Owner")]
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create Property</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="NewProperty" OnValidSubmit="AddProperty" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="title" class="form-label">Title:</label>
+                <InputText id="title" @bind-Value="NewProperty.Title" class="form-control" aria-required="true" />
+                <ValidationMessage For="() => NewProperty.Title" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description:</label>
+                <InputText id="description" @bind-Value="NewProperty.Description" class="form-control" />
+                <ValidationMessage For="() => NewProperty.Description" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="city" class="form-label">City:</label>
+                <InputText id="city" @bind-Value="NewProperty.City" class="form-control" aria-required="true" />
+                <ValidationMessage For="() => NewProperty.City" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="priceperslot" class="form-label">PricePerSlot:</label>
+                <InputNumber id="priceperslot" @bind-Value="NewProperty.PricePerSlot" class="form-control" />
+                <ValidationMessage For="() => NewProperty.PricePerSlot" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="imageurl" class="form-label">ImageUrl:</label>
+                <InputText id="imageurl" @bind-Value="NewProperty.ImageUrl" class="form-control" />
+                <ValidationMessage For="() => NewProperty.ImageUrl" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="maxoccupancy" class="form-label">MaxOccupancy:</label>
+                <InputNumber id="maxoccupancy" @bind-Value="NewProperty.MaxOccupancy" class="form-control" />
+                <ValidationMessage For="() => NewProperty.MaxOccupancy" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/properties">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Property NewProperty { get; set; } = default!;
+
+    protected override void OnInitialized() => NewProperty ??= new();
+
+    private async Task AddProperty()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        NewProperty.OwnerId = userId!;
+        using var context = DbFactory.CreateDbContext();
+        context.Properties.Add(NewProperty);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/properties/mine");
+    }
+}

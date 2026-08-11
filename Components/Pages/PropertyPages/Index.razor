@@ -1,0 +1,83 @@
+@page "/properties"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@using resisafe.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Properties</h1>
+
+
+<div class="row">
+    <div class="col-12 mb-3">
+        <input @bind="searchText" placeholder="Search..." class="form-control" @bind:event="oninput"
+               @bind:after="OnSearch" />
+    </div>
+</div>
+
+@if (properties is null)
+{
+    <p>Loading...</p>
+}
+else if (!properties.Any())
+{
+    <p>Properties not found</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var p in properties)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    @if (!string.IsNullOrEmpty(p.ImageUrl))
+                    {
+                        <img src="@p.ImageUrl" alt="@p.Title" class="card-img-top" style="height:180px;object-fit:cover;" />
+                    }
+                    <div class="card-body">
+                        <h2>@p.Title</h2>
+                        <p class="card-text">@p.City - @p.PricePerSlot FCFA</p>
+                        <div>
+                            <a href="@($"properties/details?id={p.Id}")">Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+
+
+@code {
+    private List<Property>? properties;
+    private string? searchText;
+
+    private ApplicationDbContext context = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+        properties = await context.Properties.ToListAsync();
+    }
+
+    public async Task OnSearch()
+    {
+        await Task.Delay(400);
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            properties = await context.Properties.ToListAsync();
+        }
+        else
+        {
+            properties = await context.Properties.Where(p => p.Title.ToLower().Contains(searchText) ||
+p.City.ToLower().Contains(searchText)).ToListAsync();
+        }
+
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

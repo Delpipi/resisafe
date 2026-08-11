@@ -1,0 +1,72 @@
+@page "/properties/mine"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@using resisafe.Data
+@attribute [Authorize(Roles = "Owner")]
+@implements IAsyncDisposable
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Index</PageTitle>
+
+<h1>My Properties</h1>
+
+<p class="text-end">
+    <a href="properties/create" class="btn btn-primary">Create New</a>
+</p>
+
+@if (properties is null)
+{
+    <p>Loading...</p>
+}
+else if (!properties.Any())
+{
+    <p>No Properties published yet.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var p in properties)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    @if (!string.IsNullOrEmpty(p.ImageUrl))
+                    {
+                        <img src="@p.ImageUrl" alt="@p.Title" class="card-img-top" style="height:180px;object-fit:cover;" />
+                    }
+                    <div class="card-body">
+                        <h2>@p.Title</h2>
+                        <p class="card-text">@p.City - @p.PricePerSlot FCFA</p>
+                        <div>
+                            <a href="@($"properties/edit?id={p.Id}")">Edit</a> |
+                            <a href="@($"properties/details?id={p.Id}")">Details</a> |
+                            <a href="@($"properties/delete?id={p.Id}")">Delete</a>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        }
+    </div>
+}
+
+
+
+@code {
+    private List<Property>? properties;
+
+    private ApplicationDbContext context = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authSate = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authSate.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        context = DbFactory.CreateDbContext();
+        properties = await context.Properties.Where(p => p.OwnerId == userId).ToListAsync();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

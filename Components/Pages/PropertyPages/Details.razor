@@ -1,0 +1,103 @@
+@page "/properties/details"
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Models
+@using resisafe.Data
+@inject IDbContextFactory<resisafe.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<AuthorizeView>
+    <Authorized Context="authContext">
+        @if (property is null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <h1>@property.Title</h1>
+            <img src="@property.ImageUrl" alt="@property.Title" style="max-width: 400px;" />
+            <p>@property.Description</p>
+            <p><strong>@property.City</strong> - @property.PricePerSlot FCFA</p>
+            <EditForm Model="NewBooking" OnValidSubmit="HandleBook" FormName="book" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label>Check-in date</label>
+                    <InputDate @bind-Value="NewBooking.CheckInDate" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Time slot</label>
+                    <InputSelect @bind-Value="NewBooking.Slot" class="form-select">
+                        <option value="@SlotType.FullDay">Full day (24h)</option>
+                        <option value="@SlotType.Daytime">Day - 9 AM to 5 PM</option>
+                        <option value="@SlotType.Nighttime">Night - 8 PM to 9 AM</option>
+                    </InputSelect>
+                </div>
+
+                @if (SlotTaken)
+                {
+                    <p class="text-danger">This time slot is already booked for this date.</p>
+                }
+
+                <button type="submit" class="btn btn-primary">Book (simulated escrow payment)</button>
+
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>Log in to book this property. <a href="/Account/Login">Log in</a></p>
+    </NotAuthorized>
+
+</AuthorizeView>
+
+@code {
+    private ApplicationDbContext context = default!;
+    private Property? property;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Booking NewBooking { get; set; } = default!;
+
+    private bool SlotTaken;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NewBooking ??= new() { CheckInDate = DateTime.Today.AddDays(1) };
+        context = DbFactory.CreateDbContext();
+        property = await context.Properties.FirstOrDefaultAsync(p => p.Id == Id);
+
+        if (property is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    private async Task HandleBook()
+    {
+        //Verify no reservation
+        SlotTaken = await context.Bookings.AnyAsync(b =>
+        b.PropertyId == Id && b.CheckInDate.Date == NewBooking.CheckInDate.Date && b.Slot == NewBooking.Slot && b.Status !=
+BookingStatus.Cancelled);
+
+        if (SlotTaken) return;
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        NewBooking.PropertyId = Id;
+        NewBooking.GuestId = userId!;
+        NewBooking.AmountHeld = property!.PricePerSlot;
+        NewBooking.Status = BookingStatus.Pending;
+
+        context.Bookings.Add(NewBooking);
+        await context.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/bookings/mine");
+    }
+}
