@@ -50,6 +50,11 @@
                 <ValidationMessage For="() => NewProperty.MaxOccupancy" class="text-danger" />
             </div>
 
+            @if (errorMessage is not null)
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+
             <button type="submit" class="btn btn-primary">Create</button>
         </EditForm>
     </div>
@@ -63,17 +68,27 @@
     [SupplyParameterFromForm]
     private Property NewProperty { get; set; } = default!;
 
+    private string? errorMessage;
+
     protected override void OnInitialized() => NewProperty ??= new();
 
     private async Task AddProperty()
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+        errorMessage = null;
+        try
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
 
-        NewProperty.OwnerId = userId!;
-        using var context = DbFactory.CreateDbContext();
-        context.Properties.Add(NewProperty);
-        await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/properties/mine");
+            NewProperty.OwnerId = userId!;
+            using var context = DbFactory.CreateDbContext();
+            context.Properties.Add(NewProperty);
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo("/properties/mine");
+        }
+        catch (Exception)
+        {
+            errorMessage = "We couldn't publish your listing due to a technical issue. Please check your input and try again.";
+        }
     }
 }

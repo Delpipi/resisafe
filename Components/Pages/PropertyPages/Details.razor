@@ -38,9 +38,18 @@
                     </InputSelect>
                 </div>
 
-                @if (SlotTaken)
+                @if (slotaken)
                 {
                     <p class="text-danger">This time slot is already booked for this date.</p>
+                }
+
+                @if (errorMessage is not null)
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+                @if (bookingSuccess)
+                {
+                    <div class="alert alert-success">Booking confirmed! Redirecting...</div>
                 }
 
                 <button type="submit" class="btn btn-primary">Book (simulated escrow payment)</button>
@@ -64,7 +73,11 @@
     [SupplyParameterFromForm]
     private Booking NewBooking { get; set; } = default!;
 
-    private bool SlotTaken;
+    private bool slotaken;
+
+    private string? errorMessage;
+    private bool bookingSuccess;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,27 +100,42 @@
     /// </summary>
     private async Task HandleBook()
     {
-        // Reject the booking if an active reservation already exists for this
-        // exact property, date, and time slot
-        SlotTaken = await context.Bookings.AnyAsync(b =>
-        b.PropertyId == Id && b.CheckInDate.Date == NewBooking.CheckInDate.Date && b.Slot == NewBooking.Slot && b.Status !=
-BookingStatus.Cancelled);
+        errorMessage = null;
+        bookingSuccess = false;
 
-        if (SlotTaken) return;
+        try
+        {
+            // Reject the booking if an active reservation already exists for this
+            // exact property, date, and time slot
+            slotaken = await context.Bookings.AnyAsync(b =>
+            b.PropertyId == Id && b.CheckInDate.Date == NewBooking.CheckInDate.Date && b.Slot == NewBooking.Slot && b.Status !=
+    BookingStatus.Cancelled);
 
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+            if (slotaken)
+            {
+                errorMessage = "This slot is already booked for the selected date. Please choose a different date or slot.";
+                return;
+            }
 
-        NewBooking.PropertyId = Id;
-        NewBooking.GuestId = userId!;
-        NewBooking.AmountHeld = property!.PricePerSlot;
-        NewBooking.Status = BookingStatus.Pending;
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
 
-        NewBooking.CheckInCode = new Random().Next(1000, 9999).ToString();
+            NewBooking.PropertyId = Id;
+            NewBooking.GuestId = userId!;
+            NewBooking.AmountHeld = property!.PricePerSlot;
+            NewBooking.Status = BookingStatus.Pending;
+            NewBooking.CheckInCode = new Random().Next(1000, 9999).ToString();
 
-        context.Bookings.Add(NewBooking);
-        await context.SaveChangesAsync();
+            context.Bookings.Add(NewBooking);
+            await context.SaveChangesAsync();
 
-        NavigationManager.NavigateTo("/bookings/mine");
+            bookingSuccess = true;
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/bookings/mine");
+        }
+        catch (Exception)
+        {
+            errorMessage = "We couldn't process your booking due to a technical issue. Please try again in a moment.";
+        }
     }
 }

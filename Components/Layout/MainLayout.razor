@@ -16,7 +16,18 @@
         </AuthorizeView>
 
         <article class="content px-4">
-            @Body
+            <ErrorBoundary>
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent Context="ex">
+                    <div class="alert alert-danger m-3">
+                        <h4>Something went wrong</h4>
+                        <p>An unexpected error occurred. Please try again or contact support if the problem persists.
+                        </p>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
         </article>
     </main>
 </div>
