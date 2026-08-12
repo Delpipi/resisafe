@@ -1,0 +1,57 @@
+@page "/bookings/mine"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using resisafe.Data
+@using resisafe.Models
+@attribute [Authorize]
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthProvider
+
+<h1>Mes réservations</h1>
+
+@if (bookings is null)
+{
+    <p>Chargement...</p>
+}
+else
+{
+    @foreach (var b in bookings)
+    {
+        <div class="card mb-3 p-3">
+            <h5>@b.Property?.Title</h5>
+            <p>@b.CheckInDate.ToShortDateString() — @b.Slot — Status: <strong>@b.Status</strong></p>
+            <p>Amount held (escrow): @b.AmountHeld FCFA</p>
+
+            @if (b.Status == BookingStatus.Pending)
+            {
+                <p>Check-in code to present on-site: <strong>@b.CheckInCode</strong></p>
+                <button class="btn btn-success" @onclick="() => ConfirmCheckIn(b)">
+                    Confirm my check-in
+                </button>
+            }
+        </div>
+    }
+}
+
+@code {
+    private List<Booking>? bookings;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        bookings = await DbContext.Bookings
+            .Include(b => b.Property)
+            .Where(b => b.GuestId == currentUserId)
+            .ToListAsync();
+    }
+
+    private async Task ConfirmCheckIn(Booking b)
+    {
+        b.Status = BookingStatus.Completed;
+        await DbContext.SaveChangesAsync();
+    }
+}

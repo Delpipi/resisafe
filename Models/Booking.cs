@@ -22,5 +22,7 @@ public class Booking
 
     public decimal AmountHeld { get; set; }
 
+    public string CheckInCode { get; set; } = "";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
