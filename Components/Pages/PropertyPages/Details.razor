@@ -78,9 +78,17 @@
         }
     }
 
+    /// <summary>
+    /// Books the selected property for the chosen date and slot.
+    /// Prevents double-booking by checking for an existing active booking
+    /// (any status other than Cancelled) on the same property, date, and slot
+    /// before inserting the new reservation. Generates a check-in code and
+    /// marks the payment as held in escrow (simulated).
+    /// </summary>
     private async Task HandleBook()
     {
-        //Verify no reservation
+        // Reject the booking if an active reservation already exists for this
+        // exact property, date, and time slot
         SlotTaken = await context.Bookings.AnyAsync(b =>
         b.PropertyId == Id && b.CheckInDate.Date == NewBooking.CheckInDate.Date && b.Slot == NewBooking.Slot && b.Status !=
 BookingStatus.Cancelled);

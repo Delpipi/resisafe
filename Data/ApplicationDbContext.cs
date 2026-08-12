@@ -9,6 +9,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Property> Properties { get; set; }
     public DbSet<Booking> Bookings { get; set; }
 
+    /// <summary>
+    /// Configures foreign key delete behavior for the Booking entity.
+    /// Both relationships (Guest and Property) are set to Restrict rather
+    /// than Cascade, because SQL Server rejects multiple cascade paths that
+    /// converge on the same AspNetUsers table (Booking -> Guest, and
+    /// Booking -> Property -> Owner).
+    /// </summary>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

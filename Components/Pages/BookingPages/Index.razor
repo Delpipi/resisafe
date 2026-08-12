@@ -53,6 +53,10 @@ else
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Marks the booking as completed once the guest confirms physical
+    /// check-in, releasing the held funds to the property owner (simulated).
+    /// </summary>
     private async Task ConfirmCheckIn(Booking b)
     {
         b.Status = BookingStatus.Completed;

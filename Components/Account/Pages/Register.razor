@@ -81,6 +81,11 @@ error.Description))}";
         Input ??= new();
     }
 
+    /// <summary>
+    /// Creates a new user account, assigns the selected role (Guest or Owner),
+    /// and signs the user in (or redirects to email confirmation, which is
+    /// disabled for this MVP).
+    /// </summary>
     public async Task RegisterUser(EditContext editContext)
     {
         var user = CreateUser();
