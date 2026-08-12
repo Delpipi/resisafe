@@ -95,6 +95,8 @@ BookingStatus.Cancelled);
         NewBooking.AmountHeld = property!.PricePerSlot;
         NewBooking.Status = BookingStatus.Pending;
 
+        NewBooking.CheckInCode = new Random().Next(1000, 9999).ToString();
+
         context.Bookings.Add(NewBooking);
         await context.SaveChangesAsync();
 

@@ -54,7 +54,10 @@
         var ownerId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
 
         using var context = DbFactory.CreateDbContext();
-        booking = await context.Bookings.FirstOrDefaultAsync(b => b.Id == Id && b.Property!.OwnerId == ownerId);
+        booking = await context.Bookings
+        .Include(b => b.Property)
+        .Include(b => b.Guest)
+        .FirstOrDefaultAsync(b => b.Id == Id && b.Property!.OwnerId == ownerId);
 
         if (booking is null)
         {

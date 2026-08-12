@@ -95,6 +95,10 @@ else
     private async Task UpdateProperty()
     {
         using var context = DbFactory.CreateDbContext();
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var cuurentUserId = authState.User.FindFirst(c => c.Type.EndsWith("nameidentifier"))?.Value;
+
+        Property!.OwnerId = cuurentUserId!;
         context.Attach(Property!).State = EntityState.Modified;
 
         try

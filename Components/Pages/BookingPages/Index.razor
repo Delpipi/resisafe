@@ -8,11 +8,15 @@
 @inject ApplicationDbContext DbContext
 @inject AuthenticationStateProvider AuthProvider
 
-<h1>Mes réservations</h1>
+<h1>My Bookings</h1>
 
 @if (bookings is null)
 {
     <p>Chargement...</p>
+}
+else if (!bookings.Any())
+{
+    <p>You don't have any bookings yet.</p>
 }
 else
 {

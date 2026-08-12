@@ -23,7 +23,7 @@ else if (!bookings.Any())
 }
 else
 {
-    <QuickGrid Class="table" Items="context.Bookings">
+    <QuickGrid Class="table" Items="bookings.AsQueryable()">
         <PropertyColumn Property="booking => booking.Property!.Title" />
         <PropertyColumn Property="booking => booking.CheckInDate.ToShortDateString()" />
         <PropertyColumn Property="booking => booking.Slot" />
@@ -32,7 +32,6 @@ else
         <PropertyColumn Property="booking => booking.CreatedAt" />
 
         <TemplateColumn Context="booking">
-            <a href="@($"bookings/edit?id={booking.Id}")">Edit</a> |
             <a href="@($"bookings/details?id={booking.Id}")">Details</a> |
             <a href="@($"bookings/delete?id={booking.Id}")">Delete</a>
         </TemplateColumn>
